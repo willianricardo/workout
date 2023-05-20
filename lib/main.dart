@@ -1,125 +1,600 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 void main() {
-  runApp(const MyApp());
+  initializeDateFormatting().then((_) => runApp(const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Workout',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a blue toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      debugShowCheckedModeBanner: false,
+      home: const HomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class WorkoutPlan {
+  final String name;
+  final List<ExercisePlan> exercises;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  const WorkoutPlan({
+    required this.name,
+    required this.exercises,
+  });
+
+  static WorkoutPlan noWorkoutPlan() {
+    return const WorkoutPlan(
+      name: 'Descanso',
+      exercises: [ExercisePlan(name: 'Caminhada')],
+    );
+  }
+}
+
+class ExercisePlan {
+  final String name;
+
+  const ExercisePlan({
+    required this.name,
+  });
+}
+
+class WeekPlan {
+  final String name;
+  final List<Instruction> instructions;
+
+  const WeekPlan({
+    required this.name,
+    required this.instructions,
+  });
+
+  static WeekPlan noWeekPlan() =>
+      const WeekPlan(name: 'Descanso', instructions: []);
+}
+
+class Instruction {
+  final int sets;
+  final int reps;
+  final String name;
+
+  const Instruction({
+    required this.sets,
+    required this.reps,
+    required this.name,
+  });
+
+  @override
+  String toString() {
+    return '${sets}X$reps ($name)';
+  }
+}
+
+class Workout {
+  final DateTime dateTime;
+  final WeekPlan weekPlan;
+  final WorkoutPlan workoutPlan;
+  late final List<Exercise> exercises;
+
+  Workout({
+    required this.dateTime,
+    required this.weekPlan,
+    required this.workoutPlan,
+  }) {
+    exercises = workoutPlan.exercises
+        .map((exercisePlan) => Exercise(
+              exercisePlan: exercisePlan,
+              done: false,
+            ))
+        .toList();
+  }
+}
+
+class Exercise {
+  final ExercisePlan exercisePlan;
+  bool done;
+
+  Exercise({
+    required this.exercisePlan,
+    required this.done,
+  });
+
+  toggleDone() {
+    done = !done;
+  }
+}
+
+class _HomePageState extends State<HomePage> {
+  late final ValueNotifier<Workout> _selectedEvent;
+  CalendarFormat _calendarFormat = CalendarFormat.week;
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
+
+  List<WeekPlan> weekPlans = [
+    const WeekPlan(
+      name: 'Primeira Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 2,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Segunda Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 2,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Terceira Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 3,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Quarta Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 3,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Quinta Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 3,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Sexta Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 3,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Sétima Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 1,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 3,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+    const WeekPlan(
+      name: 'Oitava Semana',
+      instructions: [
+        Instruction(
+          sets: 1,
+          reps: 12,
+          name: 'Sinalização',
+        ),
+        Instruction(
+          sets: 3,
+          reps: 5,
+          name: 'Carga alta',
+        ),
+        Instruction(
+          sets: 2,
+          reps: 12,
+          name: 'Conexão muscular',
+        ),
+      ],
+    ),
+  ];
+
+  List<WorkoutPlan> workoutPlans = [
+    const WorkoutPlan(
+      name: 'Treino A',
+      exercises: [
+        ExercisePlan(
+          name: 'DESENVOLVIMENTO ARTICULADO NEUTRO',
+        ),
+        ExercisePlan(
+          name: 'ELEVAÇÃO FRONTAL PEGADA NEUTRA COM HALTER',
+        ),
+        ExercisePlan(
+          name: 'SUPINO INCLINADO MAQUINA',
+        ),
+        ExercisePlan(
+          name: 'SUPINO INCLINADO COM BARRA',
+        ),
+        ExercisePlan(
+          name: 'SUPINO RETO MAQUINA',
+        ),
+        ExercisePlan(
+          name: 'VOADOR',
+        ),
+        ExercisePlan(
+          name: 'ROSCA DIRETA NO CROSS COM BARRA W',
+        ),
+        ExercisePlan(
+          name: 'ROSCA MARTELO COM HALTER',
+        ),
+      ],
+    ),
+    const WorkoutPlan(
+      name: 'Treino B',
+      exercises: [
+        ExercisePlan(
+          name: 'BANCO ABDUTOR',
+        ),
+        ExercisePlan(
+          name: 'LEG PRESS',
+        ),
+        ExercisePlan(
+          name: 'BANCO EXTENSOR',
+        ),
+        ExercisePlan(
+          name: 'AGACHAMENTO NO HACK MACHINE',
+        ),
+        ExercisePlan(
+          name: 'CADEIRA FLEXORA',
+        ),
+        ExercisePlan(
+          name: 'MESA FLEXORA',
+        ),
+        ExercisePlan(
+          name: 'PANTURRILHA EM PÉ NO SMITH',
+        ),
+        ExercisePlan(
+          name: 'PANTURRILHA SENTADO',
+        ),
+      ],
+    ),
+    const WorkoutPlan(
+      name: 'Treino C',
+      exercises: [
+        ExercisePlan(
+          name: 'PUXADOR FRENTE BARRA GRANDE PEGADA NEUTRA (BARRA NOVA)',
+        ),
+        ExercisePlan(
+          name: 'PUXADOR BARRA PEQUENA PEGADA NEUTRA (BARRA NOVA)',
+        ),
+        ExercisePlan(
+          name: 'PUXADOR COM TRIANGULO OU PULL DOWN COM BARRA NO CROSS',
+        ),
+        ExercisePlan(
+          name: 'PUXADOR COM BARRA MEDIA NEUTRA',
+        ),
+        ExercisePlan(
+          name: 'REMADA CAVALINHO PEGADA ABERTA PRONADA',
+        ),
+        ExercisePlan(
+          name: 'REMADA BAIXA PEGADA NEUTRA',
+        ),
+        ExercisePlan(
+          name: 'REMADA ARTICULADA PEGADA ABERTA E PRONADA',
+        ),
+        ExercisePlan(
+          name: 'REMADA UNILATERAL NA MAQUINA ARTICULADA',
+        ),
+      ],
+    ),
+    const WorkoutPlan(
+      name: 'Treino D',
+      exercises: [
+        ExercisePlan(
+          name: 'ELEVAÇÃO LATERAL COM HALTER',
+        ),
+        ExercisePlan(
+          name: 'ELEVAÇÃO LATERAL NO CROSS',
+        ),
+        ExercisePlan(
+          name: 'FACE PULL',
+        ),
+        ExercisePlan(
+          name: 'CRUCIFIXO INVERSO NA MAQUINA',
+        ),
+        ExercisePlan(
+          name: 'CRUCIFIXO INVERSO NO CROSS POLIA NA LINHA DO OMBRO',
+        ),
+        ExercisePlan(
+          name: 'TRICEPS CORDA',
+        ),
+        ExercisePlan(
+          name: 'TRICEPS PULLEY BARRA W',
+        ),
+        ExercisePlan(
+          name: 'TRICEPS ARREMESSO COM BARRA W',
+        ),
+      ],
+    ),
+    const WorkoutPlan(
+      name: 'Treino E',
+      exercises: [
+        ExercisePlan(
+          name: 'BANCO ABDUTOR',
+        ),
+        ExercisePlan(
+          name: 'LEG PRESS',
+        ),
+        ExercisePlan(
+          name: 'BANCO EXTENSOR',
+        ),
+        ExercisePlan(
+          name: 'AGACHAMENTO NO HACK MACHINE',
+        ),
+        ExercisePlan(
+          name: 'CADEIRA FLEXORA',
+        ),
+        ExercisePlan(
+          name: 'MESA FLEXORA',
+        ),
+        ExercisePlan(
+          name: 'PANTURRILHA EM PÉ NO SMITH',
+        ),
+        ExercisePlan(
+          name: 'PANTURRILHA SENTADO',
+        ),
+      ],
+    ),
+    const WorkoutPlan(
+      name: 'Treino F',
+      exercises: [
+        ExercisePlan(
+          name: 'ABDOMINAL PRANCHA',
+        ),
+        ExercisePlan(
+          name: 'ABDOMINAL SUPRA',
+        ),
+        ExercisePlan(
+          name: 'ABDOMINA ELEVAÇÃO DE PERNA',
+        ),
+        ExercisePlan(
+          name: 'ABDOMINAL NA PARARELA ELEVAÇÃO DE PERNA FLEXIONADA',
+        ),
+        ExercisePlan(
+          name: 'TRICEPS BARRA W',
+        ),
+        ExercisePlan(
+          name: 'ROSCA SCOOT MAQUINA',
+        ),
+        ExercisePlan(
+          name: 'ROSCA ALTERNADA COM HALTER',
+        ),
+      ],
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _selectedDay = _focusedDay;
+    _selectedEvent = ValueNotifier(_getEventForDay(_selectedDay));
+  }
+
+  @override
+  void dispose() {
+    _selectedEvent.dispose();
+    super.dispose();
+  }
+
+  Workout _getEventForDay(DateTime day) {
+    if (day.weekday == 7) {
+      return Workout(
+        dateTime: _selectedDay,
+        weekPlan: WeekPlan.noWeekPlan(),
+        workoutPlan: WorkoutPlan.noWorkoutPlan(),
+      );
+    }
+
+    return Workout(
+      dateTime: _selectedDay,
+      weekPlan: weekPlans[0],
+      workoutPlan: workoutPlans[day.weekday - 1],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        title: const Text(
+          'Lista de Treinos',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      body: Column(
+        children: [
+          TableCalendar(
+            locale: 'pt_BR',
+            firstDay: DateTime.utc(2023),
+            lastDay: DateTime.utc(2030),
+            focusedDay: _focusedDay,
+            startingDayOfWeek: StartingDayOfWeek.sunday,
+            selectedDayPredicate: (day) {
+              return isSameDay(_selectedDay, day);
+            },
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+                _selectedEvent.value = _getEventForDay(selectedDay);
+              });
+            },
+            calendarFormat: _calendarFormat,
+            availableCalendarFormats: const {
+              CalendarFormat.week: 'Semanal',
+            },
+            onFormatChanged: (format) {
+              setState(() {
+                _calendarFormat = format;
+              });
+            },
+            onPageChanged: (focusedDay) {
+              _focusedDay = focusedDay;
+            },
+          ),
+          const SizedBox(height: 0),
+          Card(
+            margin: const EdgeInsets.all(10),
+            child: ListTile(
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedEvent.value.workoutPlan.name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ..._selectedEvent.value.weekPlan.instructions
+                      .map((instruction) => Text(
+                            instruction.toString(),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ))
+                      .toList()
+                ],
+              ),
+              subtitle: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  ..._selectedEvent.value.exercises
+                      .map(
+                        (exercise) => InkWell(
+                          onTap: () => setState(() {
+                            exercise.toggleDone();
+                          }),
+                          child: Text(
+                            toBeginningOfSentenceCase(
+                              exercise.exercisePlan.name.toLowerCase(),
+                              'pt_BR',
+                            )!,
+                            style: TextStyle(
+                              fontSize: 15,
+                              decoration: exercise.done
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList()
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
